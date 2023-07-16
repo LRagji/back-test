@@ -21,9 +21,9 @@ const tableheader = `<table style="width:100%" ><tr>
 </tr>`;
 const tableFooter = `</table>`;
 
-module.exports.reportTradeLog = function reportTradeLog(tradeLog) {
-    const filePath = path.join(__dirname, "/reports/", "trade-logs.html");
-    fs.mkdirSync(path.dirname(filePath));
+module.exports.reportTradeLog = function reportTradeLog(tradeLog, reportName) {
+    const filePath = path.join(__dirname, "/reports/", `${reportName}.html`);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
     const handle = fs.openSync(filePath, "a");
     try {
         fs.writeFileSync(handle, htmlHeader);
@@ -32,19 +32,19 @@ module.exports.reportTradeLog = function reportTradeLog(tradeLog) {
         let maxCapital = 0;
         let trendData = [];
         tradeLog.forEach((transaction, idx) => {
-            fs.writeFileSync(handle, `<tr> 
+            fs.writeFileSync(handle, `<tr ${transaction.remarks === "Executed" ? (transaction.profit >= 0 ? 'style="background-color: greenyellow"' : 'style="background-color: lightcoral"') : ""}> 
             <td>${idx}</td> 
             <td>${transaction.time}</td> 
             <td>${transaction.index}(${transaction.normalizedIndex})</td> 
-            <td>${transaction.cost}</td> 
-            <td>${transaction.profit}</td> 
+            <td>${transaction.cost.toFixed(2)}</td> 
+            <td>${transaction.profit.toFixed(2)}</td> 
             <td>${transaction.remarks}</td> 
             </tr>`);
             trendData.push([idx, transaction.index, transaction.profit, transaction.normalizedIndex]);
-            totalProfit += transaction.profit;
+            if (transaction.remarks === "Executed") totalProfit += transaction.profit;
             maxCapital = Math.max(maxCapital, transaction.cost);
         });
-        fs.writeFileSync(handle, `<h1>${((totalProfit / maxCapital) * 100.0).toFixed(2)}%</h1><span>Total Profit:${totalProfit} Total Capital:${maxCapital}</span>`);
+        fs.writeFileSync(handle, `<h1>${Math.round((totalProfit / maxCapital) * 100.0)}%</h1><span>Total Profit:${Math.round(totalProfit)} Total Capital:${Math.round(maxCapital)}</span>`);
         fs.writeFileSync(handle, tableFooter);
         fs.writeFileSync(handle, generateChartScript(trendData, ["Index", "Profit", "NormalizedIndex"]));
         fs.writeFileSync(handle, htmlFooter);
